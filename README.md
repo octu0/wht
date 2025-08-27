@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/octu0/wht)](https://goreportcard.com/report/github.com/octu0/wht)
 [![Releases](https://img.shields.io/github/v/release/octu0/wht)](https://github.com/octu0/wht/releases)
 
-`wht` is a Go library that provides Walsh-Hadamard Transform and Zigzag scan functions.
+`wht` is Walsh-Hadamard Transform and Zigzag scan implementation.
 
 ## Installation
 
@@ -35,7 +35,7 @@ func main() {
 	x := wht.Transform4([4]int16{1, 2, 3, 4})
 	fmt.Println(x)    // output: [10 -4 0 -2]
 	y := wht.Invert4(x)
-	fmt.Println(y)    // output: [1, 2, 3, 4]
+	fmt.Println(y)    // output: [1 2 3 4]
 
 	// Zigzag scan
 	matrix := []int16{
