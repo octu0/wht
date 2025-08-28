@@ -17,7 +17,7 @@ func Invert4(in [4]int16) [4]int16 {
 	return out
 }
 
-func Transform(in []int16) {
+func Transform[T Signed](in []T) {
 	n := len(in)
 
 	if n < 1 {
@@ -30,16 +30,16 @@ func Transform(in []int16) {
 	fwht(in, n)
 }
 
-func Invert(in []int16) {
+func Invert[T Signed](in []T) {
 	n := len(in)
 
 	fwht(in, n)
 	for i, v := range in {
-		in[i] = v / int16(n)
+		in[i] = v / T(n)
 	}
 }
 
-func fwht(in []int16, n int) {
+func fwht[T Signed](in []T, n int) {
 	if n < 2 {
 		return
 	}

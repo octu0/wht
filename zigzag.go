@@ -1,6 +1,6 @@
 package wht
 
-func Zigzag(data []int16, stride int) []int16 {
+func Zigzag[T Signed](data []T, stride int) []T {
 	if stride < 1 {
 		return nil
 	}
@@ -9,7 +9,7 @@ func Zigzag(data []int16, stride int) []int16 {
 	}
 	maxN := stride * stride
 
-	result := make([]int16, maxN)
+	result := make([]T, maxN)
 	row, col := 0, 0
 	goingUp := true
 
@@ -22,7 +22,7 @@ func Zigzag(data []int16, stride int) []int16 {
 	return result
 }
 
-func Unzigzag(data []int16, stride int) []int16 {
+func Unzigzag[T Signed](data []T, stride int) []T {
 	if stride < 1 {
 		return nil
 	}
@@ -31,7 +31,7 @@ func Unzigzag(data []int16, stride int) []int16 {
 	}
 	maxN := stride * stride
 
-	result := make([]int16, maxN)
+	result := make([]T, maxN)
 	row, col := 0, 0
 	goingUp := true
 
