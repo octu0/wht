@@ -1,7 +1,7 @@
 package wht
 
-func Transform4(in [4]int16) [4]int16 {
-	return [4]int16{
+func Transform4[T SignedInt](in [4]T) [4]T {
+	return [4]T{
 		(in[0] + in[1] + in[2] + in[3]),
 		(in[0] + in[1] - in[2] - in[3]),
 		(in[0] - in[1] - in[2] + in[3]),
@@ -9,7 +9,7 @@ func Transform4(in [4]int16) [4]int16 {
 	}
 }
 
-func Invert4(in [4]int16) [4]int16 {
+func Invert4[T SignedInt](in [4]T) [4]T {
 	out := Transform4(in)
 	for i := range out {
 		out[i] >>= 2
