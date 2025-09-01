@@ -1,43 +1,36 @@
 package wht
 
-func Zigzag[T Signed](data []T, stride int) []T {
-	if stride < 1 {
-		return nil
-	}
-	if len(data) != stride*stride {
-		return nil
-	}
-	maxN := stride * stride
+func Zigzag[T Signed](matrix [][]T) []T {
+	n := len(matrix)
+	maxN := n * n
 
 	result := make([]T, maxN)
 	row, col := 0, 0
 	goingUp := true
 
 	for i := 0; i < maxN; i += 1 {
-		index := row*stride + col
-		result[i] = data[index]
+		result[i] = matrix[row][col]
 
-		cursor(stride, &row, &col, &goingUp)
+		cursor(n, &row, &col, &goingUp)
 	}
 	return result
 }
 
-func Unzigzag[T Signed](data []T, stride int) []T {
-	if stride < 1 {
-		return nil
-	}
+func Unzigzag[T Signed](data []T, stride int) [][]T {
 	if len(data) != stride*stride {
 		return nil
 	}
 	maxN := stride * stride
 
-	result := make([]T, maxN)
+	result := make([][]T, stride)
 	row, col := 0, 0
 	goingUp := true
 
+	for i := 0; i < stride; i += 1 {
+		result[i] = make([]T, stride)
+	}
 	for i := 0; i < maxN; i += 1 {
-		index := row*stride + col
-		result[index] = data[i]
+		result[row][col] = data[i]
 
 		cursor(stride, &row, &col, &goingUp)
 	}

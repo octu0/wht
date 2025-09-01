@@ -8,16 +8,15 @@ import (
 
 func TestZigzag(t *testing.T) {
 	t.Run("0..15", func(tt *testing.T) {
-		stride := 4
 		// 4x4
-		data := []int16{
-			0, 1, 5, 6,
-			2, 4, 7, 12,
-			3, 8, 11, 13,
-			9, 10, 14, 15,
+		data := [][]int16{
+			{0, 1, 5, 6},
+			{2, 4, 7, 12},
+			{3, 8, 11, 13},
+			{9, 10, 14, 15},
 		}
 
-		sorted := Zigzag(data, stride)
+		sorted := Zigzag(data)
 		expect1 := []int16{
 			0, 1, 2, 3,
 			4, 5, 6, 7,
@@ -28,12 +27,12 @@ func TestZigzag(t *testing.T) {
 			tt.Errorf("%v != %v", sorted, expect1)
 		}
 
-		restored := Unzigzag(sorted, stride)
-		expect2 := []int16{
-			0, 1, 5, 6,
-			2, 4, 7, 12,
-			3, 8, 11, 13,
-			9, 10, 14, 15,
+		restored := Unzigzag(sorted, 4)
+		expect2 := [][]int16{
+			{0, 1, 5, 6},
+			{2, 4, 7, 12},
+			{3, 8, 11, 13},
+			{9, 10, 14, 15},
 		}
 		if cmp.Equal(restored, expect2) != true {
 			tt.Errorf("%v != %v", restored, expect2)
