@@ -1,0 +1,6 @@
+github.com/octu0/runlength v0.0.0-20230312112827-7868c7857883 h1:a26om0dUqhMAxzb9FTrGyVmUCPPDHbGJqibFfQRj1Kw=
+github.com/octu0/runlength v0.0.0-20230312112827-7868c7857883/go.mod h1:Lz7cFjDBaMFFABadbv7Qk6DLfVi2ek30FGPaANVu6D0=
+github.com/octu0/runlength v0.0.0-20250902103003-d4181ed36dea h1:GNZlPRBRu6Pb9aZvfXi6q4iAdVqV9wxuMD+HV6I0Mg8=
+github.com/octu0/runlength v0.0.0-20250902103003-d4181ed36dea/go.mod h1:Lz7cFjDBaMFFABadbv7Qk6DLfVi2ek30FGPaANVu6D0=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
