@@ -31,13 +31,13 @@ func ExampleTransform4() {
 }
 
 func ExampleZigzag() {
-	matrix := []int16{
-		1, 2, 3, 4,
-		5, 6, 7, 8,
-		9, 10, 11, 12,
-		13, 14, 15, 16,
+	matrix := [][]int16{
+    {1, 2, 3, 4},
+		{5, 6, 7, 8},
+		{9, 10, 11, 12},
+		{13, 14, 15, 16},
 	}
-	zigzag := wht.Zigzag(matrix, 4)
+	zigzag := wht.Zigzag(matrix)
 	fmt.Println(zigzag)
 
 	orig := wht.Unzigzag(zigzag, 4)
@@ -45,5 +45,5 @@ func ExampleZigzag() {
 
 	// Output:
 	// [1 2 5 9 6 3 4 7 10 13 14 11 8 12 15 16]
-	// [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]
+	// [[1 2 3 4] [5 6 7 8] [9 10 11 12] [13 14 15 16]]
 }

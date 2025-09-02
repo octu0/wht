@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/octu0/wht"
 )
 
@@ -27,28 +28,23 @@ func main() {
 	// Walsh-Hadamard Transform
 	data := []int16{1, 0, 1, 0}
 	wht.Transform(data)
-	fmt.Println(data) // output: [2 2 0 0]
+	fmt.Println(data) // => [2 2 0 0]
 
 	wht.Invert(data)
-	fmt.Println(data) // output: [1 0 1 0]
-
-	x := wht.Transform4([4]int16{1, 2, 3, 4})
-	fmt.Println(x)    // output: [10 -4 0 -2]
-	y := wht.Invert4(x)
-	fmt.Println(y)    // output: [1 2 3 4]
+	fmt.Println(data) // => [1 0 1 0]
 
 	// Zigzag scan
-	matrix := []int16{
-		1, 2, 3, 4,
-		5, 6, 7, 8,
-		9, 10, 11, 12,
-		13, 14, 15, 16,
+	matrix := [][]int16{
+    {1, 2, 3, 4},
+		{5, 6, 7, 8},
+		{9, 10, 11, 12},
+		{13, 14, 15, 16},
 	}
-	zigzag := wht.Zigzag(matrix, 4)
-	fmt.Println(zigzag) // output: [1 2 5 9 6 3 4 7 10 13 14 11 8 12 15 16]
+	zigzag := wht.Zigzag(matrix)
+	fmt.Println(zigzag) // => [1 2 5 9 6 3 4 7 10 13 14 11 8 12 15 16]
 
 	orig := wht.Unzigzag(zigzag, 4)
-	fmt.Println(orig)   // output: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]
+	fmt.Println(orig) // => [[1 2 3 4] [5 6 7 8] [9 10 11 12] [13 14 15 16]]
 }
 ```
 
