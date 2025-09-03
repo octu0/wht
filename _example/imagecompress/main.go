@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"io"
 	"os"
+	"time"
 	"unsafe"
 
 	"github.com/octu0/runlength"
@@ -24,20 +25,16 @@ var (
 
 var (
 	lumaQuantizationTable = [16]int16{
+		8, 8, 8, 8,
 		16, 16, 16, 16,
-		64, 64, 64, 64,
-		64, 64, 64, 64,
-		64, 64, 64, 64,
+		16, 24, 32, 48,
+		64, 80, 96, 96,
 	}
 	chromaQuantizationTable = [16]int16{
-		// DC(0), Low Freq(1-3)
-		16, 64, 80, 90,
-		// Mid Freq(4-7)
+		64, 64, 80, 90,
 		100, 112, 128, 160,
-		// High Freq(8-11)
-		196, 200, 200, 200,
-		// Very High Freq(12-15)
-		200, 200, 200, 200,
+		176, 192, 208, 208,
+		220, 220, 240, 240,
 	}
 )
 
@@ -284,6 +281,7 @@ func main() {
 	bufCb := make([]*bytes.Buffer, 0)
 	bufCr := make([]*bytes.Buffer, 0)
 
+	t := time.Now()
 	compressedSize := 0
 	b := ycbcr.Bounds()
 	dx, dy := b.Dx(), b.Dy()
@@ -347,7 +345,7 @@ func main() {
 		}
 	}
 	original := len(ycbcr.Y) + len(ycbcr.Cb) + len(ycbcr.Cr)
-	fmt.Printf("compressed %3.2f%%\n", (float64(compressedSize)/float64(original))*100)
+	fmt.Printf("elapse=%s compressed %3.2f%%\n", time.Since(t), (float64(compressedSize)/float64(original))*100)
 
 	newImg := image.NewYCbCr(b, image.YCbCrSubsampleRatio444)
 	setRow16 := func(x, y int, yPlane, cbPlane, crPlane []int16) {
@@ -417,13 +415,25 @@ func main() {
 	}
 
 	// avg deblocking
-	for h := 0; h < dy; h++ {
-		for w := 15; w < dx-1; w += 16 {
+	for h := 0; h < dy; h += 1 {
+		for w := 15; w < dx-1; w += 15 {
+			p0 := int16(newImg.Y[newImg.YOffset(w-2, h)]) // x=13
 			p1 := int16(newImg.Y[newImg.YOffset(w-1, h)]) // x=14
 			p2 := int16(newImg.Y[newImg.YOffset(w, h)])   // x=15
 			p3 := int16(newImg.Y[newImg.YOffset(w+1, h)]) // x=16
 			p4 := int16(newImg.Y[newImg.YOffset(w+2, h)]) // x=17
-			avg := (p1 + p2 + p3 + p4) / 4
+			avg := (p0 + p1 + p2 + p3 + p4) / 5
+			newImg.Y[newImg.YOffset(w, h)] = uint8((p2*2 + avg) / 3)
+			newImg.Y[newImg.YOffset(w+1, h)] = uint8((p3*2 + avg) / 3)
+		}
+	}
+
+	for h := 0; h < dy; h += 1 {
+		for w := 15; w < dx-1; w += 8 {
+			p1 := int16(newImg.Y[newImg.YOffset(w-1, h)]) // x=14
+			p2 := int16(newImg.Y[newImg.YOffset(w, h)])   // x=15
+			p3 := int16(newImg.Y[newImg.YOffset(w+1, h)]) // x=16
+			avg := (p1 + p2 + p3) / 3
 			newImg.Y[newImg.YOffset(w, h)] = uint8((p2*2 + avg) / 3)
 			newImg.Y[newImg.YOffset(w+1, h)] = uint8((p3*2 + avg) / 3)
 		}
