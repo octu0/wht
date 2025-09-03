@@ -35,9 +35,9 @@ var (
 		// Mid Freq(4-7)
 		100, 112, 128, 160,
 		// High Freq(8-11)
-		196, 220, 250, 300,
+		196, 200, 200, 200,
 		// Very High Freq(12-15)
-		350, 400, 450, 512,
+		200, 200, 200, 200,
 	}
 )
 
@@ -51,11 +51,12 @@ func main() {
 		y = make([]int16, 16)
 		cb = make([]int16, 16)
 		cr = make([]int16, 16)
+		// - 128 = level shift
 		for i := 0; i < 16; i += 1 {
 			c := ycbcr.YCbCrAt(w+i, h)
-			y[i] = int16(c.Y)
-			cb[i] = int16(c.Cb)
-			cr[i] = int16(c.Cr)
+			y[i] = int16(c.Y) - 128
+			cb[i] = int16(c.Cb) - 128
+			cr[i] = int16(c.Cr) - 128
 		}
 		return y, cb, cr
 	}
@@ -81,6 +82,12 @@ func main() {
 		return result
 	}
 	clampU8 := func(v int16) uint8 {
+		if v < 0 {
+			return 0
+		}
+		if v > 255 {
+			return 255
+		}
 		return uint8(v)
 	}
 	encode := func(out io.Writer, dc []int16, ac []int8) error {
@@ -349,9 +356,9 @@ func main() {
 			}
 		}()
 		for i := 0; i < 16; i += 1 {
-			newImg.Y[newImg.YOffset(x+i, y)] = clampU8(yPlane[i])
-			newImg.Cb[newImg.COffset(x+i, y)] = clampU8(cbPlane[i])
-			newImg.Cr[newImg.COffset(x+i, y)] = clampU8(crPlane[i])
+			newImg.Y[newImg.YOffset(x+i, y)] = clampU8(yPlane[i] + 128)
+			newImg.Cb[newImg.COffset(x+i, y)] = clampU8(cbPlane[i] + 128)
+			newImg.Cr[newImg.COffset(x+i, y)] = clampU8(crPlane[i] + 128)
 		}
 	}
 	for h := 0; h < dy; h += 16 {
@@ -406,6 +413,19 @@ func main() {
 			setRow16(w, h+13, rowY13, rowCb13, rowCr13)
 			setRow16(w, h+14, rowY14, rowCb14, rowCr14)
 			setRow16(w, h+15, rowY15, rowCb15, rowCr15)
+		}
+	}
+
+	// avg deblocking
+	for h := 0; h < dy; h++ {
+		for w := 15; w < dx-1; w += 16 {
+			p1 := int16(newImg.Y[newImg.YOffset(w-1, h)]) // x=14
+			p2 := int16(newImg.Y[newImg.YOffset(w, h)])   // x=15
+			p3 := int16(newImg.Y[newImg.YOffset(w+1, h)]) // x=16
+			p4 := int16(newImg.Y[newImg.YOffset(w+2, h)]) // x=17
+			avg := (p1 + p2 + p3 + p4) / 4
+			newImg.Y[newImg.YOffset(w, h)] = uint8((p2*2 + avg) / 3)
+			newImg.Y[newImg.YOffset(w+1, h)] = uint8((p3*2 + avg) / 3)
 		}
 	}
 
