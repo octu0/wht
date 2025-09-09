@@ -1,4 +1,4 @@
-module github.com/octu0/wht/_example/imagecompress
+module github.com/octu0/wht/_example/imagecompress-2
 
 go 1.24.1
 
