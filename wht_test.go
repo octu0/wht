@@ -6,11 +6,30 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestTransform4(t *testing.T) {
-	t.Run("simple", func(tt *testing.T) {
+func TestTransformInline(t *testing.T) {
+	t.Run("4", func(tt *testing.T) {
 		x := [4]int16{138, 144, 149, 153}
 		r := Transform4(x)
 		y := Invert4(r)
+		if cmp.Equal(x, y) != true {
+			tt.Errorf("%v != %v", x, y)
+		}
+	})
+	t.Run("8", func(tt *testing.T) {
+		x := [8]int16{20, 35, 41, 58, 66, 79, 81, 93}
+		r := Transform8(x)
+		y := Invert8(r)
+		if cmp.Equal(x, y) != true {
+			tt.Errorf("%v != %v", x, y)
+		}
+	})
+	t.Run("16", func(tt *testing.T) {
+		x := [16]int16{
+			10, 20, 30, 40, 50, 60, 70, 80,
+			90, 85, 75, 65, 55, 45, 35, 25,
+		}
+		r := Transform16(x)
+		y := Invert16(r)
 		if cmp.Equal(x, y) != true {
 			tt.Errorf("%v != %v", x, y)
 		}
