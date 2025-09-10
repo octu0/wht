@@ -7,3 +7,4 @@ AC quantize
 Zigzag
 RLE
 RLE 4 pair compress
+deblocking

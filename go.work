@@ -2,4 +2,6 @@ go 1.24.1
 
 use (
   ./_example/imagecompress
+  ./_example/imagecompress-2
+  ./_example/imagecompress-3
 )

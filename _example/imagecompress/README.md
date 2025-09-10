@@ -6,3 +6,4 @@ DC raw
 AC quantize
 Zigzag
 RLE
+deblocking
