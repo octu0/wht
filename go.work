@@ -4,4 +4,5 @@ use (
   ./_example/imagecompress
   ./_example/imagecompress-2
   ./_example/imagecompress-3
+  ./_example/imagecompress-4
 )

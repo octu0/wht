@@ -7,6 +7,6 @@ require (
 	github.com/octu0/wht v0.0.0-00010101000000-000000000000
 )
 
-require github.com/pkg/errors v0.9.1 // indirect
+require github.com/pkg/errors v0.9.1
 
 replace github.com/octu0/wht => ../../
