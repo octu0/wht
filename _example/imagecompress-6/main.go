@@ -371,26 +371,28 @@ func main() {
 		}
 		return ycbcr.Y[i], ycbcr.Y[i+n]
 	}
-	headtailCb := func(w, h int, n int) (uint8, uint8) {
-		i := (h * ycbcr.CStride) + w
-		if len(ycbcr.Cb) < i {
-			return 0, 0
+	/*
+		headtailCb := func(w, h int, n int) (uint8, uint8) {
+			i := (h * ycbcr.CStride) + w
+			if len(ycbcr.Cb) < i {
+				return 0, 0
+			}
+			if len(ycbcr.Cb) < i+n {
+				return ycbcr.Cb[i], 0
+			}
+			return ycbcr.Cb[i], ycbcr.Cb[i+n]
 		}
-		if len(ycbcr.Cb) < i+n {
-			return ycbcr.Cb[i], 0
+		headtailCr := func(w, h int, n int) (uint8, uint8) {
+			i := (h * ycbcr.CStride) + w
+			if len(ycbcr.Cr) < i {
+				return 0, 0
+			}
+			if len(ycbcr.Cr) < i+n {
+				return ycbcr.Cr[i], 0
+			}
+			return ycbcr.Cr[i], ycbcr.Cr[i+n]
 		}
-		return ycbcr.Cb[i], ycbcr.Cb[i+n]
-	}
-	headtailCr := func(w, h int, n int) (uint8, uint8) {
-		i := (h * ycbcr.CStride) + w
-		if len(ycbcr.Cr) < i {
-			return 0, 0
-		}
-		if len(ycbcr.Cr) < i+n {
-			return ycbcr.Cb[i], 0
-		}
-		return ycbcr.Cr[i], ycbcr.Cr[i+n]
-	}
+	*/
 	clampU8 := func(v int16) uint8 {
 		if v < 0 {
 			return 0
@@ -489,29 +491,9 @@ func main() {
 		return mb8_4x8_4
 	}
 	calcMacroblockCb := func(w, h int) macroblock {
-		if true {
-			return mb8_4x8_4
-		}
-
-		if similarblock(w, h, 16, headtailCb) {
-			if similarblockNeighbor(w, h, 16, 8, headtailCb) {
-				return mb16_2x2
-			}
-			return mb16_2x8_4
-		}
 		return mb8_4x8_4
 	}
 	calcMacroblockCr := func(w, h int) macroblock {
-		if true {
-			return mb8_4x8_4
-		}
-
-		if similarblock(w, h, 16, headtailCr) {
-			if similarblockNeighbor(w, h, 16, 8, headtailCr) {
-				return mb16_2x2
-			}
-			return mb16_2x8_4
-		}
 		return mb8_4x8_4
 	}
 
