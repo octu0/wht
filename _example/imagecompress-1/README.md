@@ -1,8 +1,7 @@
-image compress 2
+image compress 1
 
 - YCbCr 4:4:4
 - Walsh-Hadamard Transform 16x16
 - DC raw
 - AC quantize / Zigzag / RLE
-- AC 4 pair compress
 - deblocking
