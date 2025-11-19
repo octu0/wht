@@ -1,11 +1,12 @@
-go 1.24.1
+go 1.25.3
 
 use (
-  ./_example/imagecompress-1
-  ./_example/imagecompress-2
-  ./_example/imagecompress-3
-  ./_example/imagecompress-4
-  ./_example/imagecompress-5
-  ./_example/imagecompress-6
-  ./_example/imagecompress-7
+	./_example/imagecompress-1
+	./_example/imagecompress-2
+	./_example/imagecompress-3
+	./_example/imagecompress-4
+	./_example/imagecompress-5
+	./_example/imagecompress-6
+	./_example/imagecompress-7
+	./_example/imagecompress-8
 )
