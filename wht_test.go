@@ -40,7 +40,8 @@ func TestTransform(t *testing.T) {
 	t.Run("simple", func(tt *testing.T) {
 		x := []int16{1, 0, 1, 0, 0, 1, 1, 0}
 		Transform(x)
-		expect1 := []int16{4, 2, 0, -2, 0, 2, 0, 2}
+		// Natural Order: {4, 2, 0, -2, 0, 2, 0, 2}
+		expect1 := []int16{4, 0, 0, 0, -2, 2, 2, 2}
 		if cmp.Equal(x, expect1) != true {
 			tt.Errorf("%v != %v", x, expect1)
 		}
@@ -79,7 +80,9 @@ func TestTransform(t *testing.T) {
 	t.Run("highseq", func(tt *testing.T) {
 		x := []int16{1, -1, 1, -1, 1, -1, 1, -1}
 		Transform(x)
-		expect1 := []int16{0, 8, 0, 0, 0, 0, 0, 0}
+		// Natural Order: {0, 8, 0, 0, 0, 0, 0, 0} (Index 1)
+		// Sequency Order: the highest frequency, it's last (Index 7)
+		expect1 := []int16{0, 0, 0, 0, 0, 0, 0, 8}
 		if cmp.Equal(x, expect1) != true {
 			tt.Errorf("%v != %v", x, expect1)
 		}
@@ -92,7 +95,9 @@ func TestTransform(t *testing.T) {
 	t.Run("sin", func(tt *testing.T) {
 		x := []int16{0, 7, 10, 7, 0, -7, -10, -7}
 		Transform(x)
-		expect1 := []int16{0, 0, 0, 0, 48, -8, -20, -20}
+		// Natural Order: {0, 0, 0, 0, 48, -8, -20, -20}
+		// Sequency Order: The fundamental frequencies toward the front.
+		expect1 := []int16{0, 48, -20, 0, 0, -20, -8, 0}
 		if cmp.Equal(x, expect1) != true {
 			tt.Errorf("%v != %v", x, expect1)
 		}

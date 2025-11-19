@@ -28,7 +28,7 @@ func main() {
 	// Walsh-Hadamard Transform
 	data := []int16{1, 0, 1, 0}
 	wht.Transform(data)
-	fmt.Println(data) // => [2 2 0 0]
+	fmt.Println(data) // => [2 0 0 2]
 
 	wht.Invert(data)
 	fmt.Println(data) // => [1 0 1 0]
