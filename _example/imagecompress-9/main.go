@@ -817,6 +817,11 @@ func main() {
 			return errors.WithStack(err)
 		}
 
+		if scale == 0 {
+			// AC Skip mode
+			return nil
+		}
+
 		qACList := make([][]int8, size)
 		for i := 0; i < size; i += 1 {
 			qACList[i] = acQuantize(data[i], acQT, scale)
@@ -840,23 +845,32 @@ func main() {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+
+		dcDequantize(dc, dcQT)
+		wht.Invert(dc)
+
+		acList := make([][]int16, size)
+		if scale == 0 {
+			// AC Skip mode
+			for i := 0; i < size; i += 1 {
+				acList[i] = make([]int16, size) // All zero
+				acList[i][0] = dc[i]
+				wht.Invert(acList[i])
+			}
+			return acList, nil
+		}
+
 		zigzag, err := acDecode(in, size)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
 		acPlanes := wht.Unzigzag(zigzag, size)
-
-		dcDequantize(dc, dcQT)
-		wht.Invert(dc)
-
-		acList := make([][]int16, size)
 		for i := 0; i < size; i += 1 {
 			acList[i] = acDequantize(acPlanes[i], acQT, int(scale))
 			acList[i][0] = dc[i]
 			wht.Invert(acList[i])
 		}
-
 		return acList, nil
 	}
 
@@ -864,14 +878,36 @@ func main() {
 	bufCb := make([]*bytes.Buffer, 0)
 	bufCr := make([]*bytes.Buffer, 0)
 
+	minVal, maxVal := int16(32767), int16(-32768)
+	rowsAndScale := func(rowN rowFunc, w, h int, size int, prediction int16, scale int) ([][]int16, int) {
+		rows := make([][]int16, size)
+		// Calculate Range to detect flat blocks
+		for i := 0; i < size; i += 1 {
+			r := rowN(w, h+i, size, prediction)
+			rows[i] = r
+			for _, v := range r {
+				if v < minVal {
+					minVal = v
+				}
+				if v > maxVal {
+					maxVal = v
+				}
+			}
+		}
+
+		localScale := scale
+		if (maxVal - minVal) < int16(size) { // Flatness threshold
+			localScale = 0
+		}
+
+		return rows, localScale
+	}
 	transformHandlerFunc := func(w, h int, size int, dcQT, acQT QuantizationTable, rowN rowFunc, setRow setRowFunc, predict predictDCFunc, scale int) (*bytes.Buffer, error) {
 		prediction := predict(tmpImg, w, h, size)
-		rows := make([][]int16, size)
-		for i := 0; i < size; i += 1 {
-			rows[i] = rowN(w, h+i, size, prediction)
-		}
+		rows, localScale := rowsAndScale(rowN, w, h, size, prediction, scale)
+
 		data := bytes.NewBuffer(make([]byte, 0, size*size))
-		if err := transform(data, dcQT, acQT, rows, size, scale); err != nil {
+		if err := transform(data, dcQT, acQT, rows, size, localScale); err != nil {
 			return nil, errors.WithStack(err)
 		}
 

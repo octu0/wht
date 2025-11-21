@@ -9,3 +9,4 @@ image compress 9
 - CBR
 - deblocking
 - Intra Prediction
+- Comfort Noise filter (AC)
