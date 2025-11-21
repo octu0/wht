@@ -411,36 +411,42 @@ func main() {
 		}
 		return uint8(v)
 	}
+	boundaryRepeat := func(width, height int, px, py int) (int, int) {
+		switch {
+		case width <= px:
+			px = width - 1 - (px - width) // Reflection
+			if px < 0 {
+				px = 0 // Clamp just in case
+			}
+		case px < 0:
+			px = -px
+			if width <= px {
+				px = width - 1
+			}
+		}
+		switch {
+		case height <= py:
+			py = height - 1 - (py - height)
+			if py < 0 {
+				py = 0
+			}
+		case py < 0:
+			py = -py
+			if height <= py {
+				py = height - 1
+			}
+		}
+		return px, py
+	}
+
 	type rowFunc func(x, y int, size int, prediction int16) []int16
 	rowY := func(x, y int, size int, prediction int16) []int16 {
 		plane := make([]int16, size)
 		width := ycbcr.Rect.Dx()
 		height := ycbcr.Rect.Dy()
 		for i := 0; i < size; i += 1 {
-			px := x + i
-			py := y
-			if width <= px {
-				px = width - 1 - (px - width) // Reflection
-				if px < 0 {
-					px = 0 // Clamp just in case
-				}
-			} else if px < 0 {
-				px = -px
-				if width <= px {
-					px = width - 1
-				}
-			}
-			if height <= py {
-				py = height - 1 - (py - height)
-				if py < 0 {
-					py = 0
-				}
-			} else if py < 0 {
-				py = -py
-				if height <= py {
-					py = height - 1
-				}
-			}
+			px, py := boundaryRepeat(width, height, x+i, y)
+
 			plane[i] = int16(ycbcr.Y[ycbcr.YOffset(px, py)]) - prediction
 		}
 		return plane
@@ -450,31 +456,7 @@ func main() {
 		width := ycbcr.Rect.Dx()
 		height := ycbcr.Rect.Dy()
 		for i := 0; i < size; i += 1 {
-			px := (x + i) * 2
-			py := y * 2
-
-			if width <= px {
-				px = width - 1 - (px - width)
-				if px < 0 {
-					px = 0
-				}
-			} else if px < 0 {
-				px = -px
-				if width <= px {
-					px = width - 1
-				}
-			}
-			if height <= py {
-				py = height - 1 - (py - height)
-				if py < 0 {
-					py = 0
-				}
-			} else if py < 0 {
-				py = -py
-				if height <= py {
-					py = height - 1
-				}
-			}
+			px, py := boundaryRepeat(width, height, (x+i)*2, y*2)
 
 			v := int16(ycbcr.Cb[ycbcr.COffset(px, py)]) - prediction
 			plane[i] = v
@@ -486,31 +468,7 @@ func main() {
 		width := ycbcr.Rect.Dx()
 		height := ycbcr.Rect.Dy()
 		for i := 0; i < size; i += 1 {
-			px := (x + i) * 2
-			py := y * 2
-
-			if width <= px {
-				px = width - 1 - (px - width)
-				if px < 0 {
-					px = 0
-				}
-			} else if px < 0 {
-				px = -px
-				if width <= px {
-					px = width - 1
-				}
-			}
-			if height <= py {
-				py = height - 1 - (py - height)
-				if py < 0 {
-					py = 0
-				}
-			} else if py < 0 {
-				py = -py
-				if height <= py {
-					py = height - 1
-				}
-			}
+			px, py := boundaryRepeat(width, height, (x+i)*2, y*2)
 
 			v := int16(ycbcr.Cr[ycbcr.COffset(px, py)]) - prediction
 			plane[i] = v
@@ -865,7 +823,6 @@ func main() {
 		}
 
 		zigzag := wht.Zigzag(qACList)
-
 		if err := acEncode(out, zigzag, size); err != nil {
 			return errors.WithStack(err)
 		}
@@ -972,7 +929,7 @@ func main() {
 		// 500kbps = 62500 bytes. 10% = 6250 bytes.
 		// scale = 1 + diff / (maxbit / 50) roughly
 		scale := 1 + int(diff/(float64(maxbit)/50.0))
-		if scale > 16 {
+		if 16 < scale {
 			scale = 16
 		}
 		return scale
