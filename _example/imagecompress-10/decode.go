@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"image"
 	"io"
 	"unsafe"
@@ -131,7 +130,6 @@ func decode(r io.Reader) (*image.YCbCr, error) {
 	if err := binary.Read(r, binary.BigEndian, &crSize); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	fmt.Println("crSize:", crSize)
 
 	crBufs := make([][]byte, 0)
 	for i := uint32(0); i < crSize; {
