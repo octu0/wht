@@ -1,4 +1,4 @@
-image compress 9
+image compress 10
 
 - YCbCr 4:2:0
 - Walsh-Hadamard Transform macroblock[8x8,16x8,16x16]

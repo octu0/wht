@@ -300,8 +300,8 @@ func (p *ImagePredictor) Deblocking() {
 			p1 := int16(p.img.Y[p.img.YOffset(w-1, h)]) // x=14
 			p2 := int16(p.img.Y[p.img.YOffset(w, h)])   // x=15
 			p3 := int16(p.img.Y[p.img.YOffset(w+1, h)]) // x=16
-			p4 := int16(p.img.Y[p.img.YOffset(w+2, h)]) // x=17
-			avg := (p0 + p1 + p2 + p3 + p4) / 5
+			//p4 := int16(p.img.Y[p.img.YOffset(w+2, h)]) // x=17
+			avg := (p0 + p1 + p2 + p3) / 4
 			p.img.Y[p.img.YOffset(w, h)] = uint8((p2*2 + avg) / 3)
 			p.img.Y[p.img.YOffset(w+1, h)] = uint8((p3*2 + avg) / 3)
 		}

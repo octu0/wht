@@ -42,3 +42,42 @@ func newScaler(maxbit int, width, height int) *Scaler {
 		processedPixels:    processedPixels,
 	}
 }
+
+type rowFunc func(x, y int, size int, prediction int16) []int16
+
+type scale struct {
+	minVal, maxVal int16
+	rowFn          rowFunc
+}
+
+func (s *scale) Rows(w, h int, size int, prediction int16, scale int) ([][]int16, int) {
+	rows := make([][]int16, size)
+	// Calculate Range to detect flat blocks
+	for i := 0; i < size; i += 1 {
+		r := s.rowFn(w, h+i, size, prediction)
+		rows[i] = r
+		for _, v := range r {
+			if v < s.minVal {
+				s.minVal = v
+			}
+			if s.maxVal < v {
+				s.maxVal = v
+			}
+		}
+	}
+
+	localScale := scale
+	if (s.maxVal - s.minVal) < int16(size) { // Flatness threshold
+		localScale = 0
+	}
+
+	return rows, localScale
+}
+
+func newScale(rowFn rowFunc) *scale {
+	return &scale{
+		minVal: 32767,
+		maxVal: -32768,
+		rowFn:  rowFn,
+	}
+}
