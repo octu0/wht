@@ -13,11 +13,10 @@ import (
 )
 
 func dcDecode(in io.Reader, size int) ([]int16, error) {
-	dc := make([]int16, size)
-	for i := 0; i < size; i += 1 {
-		if err := binary.Read(in, binary.BigEndian, &dc[i]); err != nil {
-			return nil, errors.WithStack(err)
-		}
+	rw := NewRiceReader[uint16](NewBitReader(in))
+	dc, err := dcRleDecode(rw, size)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
 	return dc, nil
 }

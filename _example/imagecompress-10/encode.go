@@ -14,10 +14,12 @@ import (
 )
 
 func dcEncode(out io.Writer, dc []int16, size int) error {
-	for i := 0; i < size; i += 1 {
-		if err := binary.Write(out, binary.BigEndian, dc[i]); err != nil {
-			return errors.WithStack(err)
-		}
+	rw := NewRiceWriter[uint16](NewBitWriter(out))
+	if err := dcRleEncode(rw, dc); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := rw.Flush(); err != nil {
+		return errors.WithStack(err)
 	}
 	return nil
 }
