@@ -9,43 +9,37 @@ type coord struct {
 }
 
 func zigzag8x7[T Signed](data [][]T, result []T) {
-	for i := 0; i < 56; i += 1 {
-		c := table8x7[i]
+	for i, c := range table8x7 {
 		result[i] = data[c.R][c.C]
 	}
 }
 
 func zigzag8x8[T Signed](data [][]T, result []T) {
-	for i := 0; i < 64; i += 1 {
-		c := table8x8[i]
+	for i, c := range table8x8 {
 		result[i] = data[c.R][c.C]
 	}
 }
 
 func zigzag16x15[T Signed](data [][]T, result []T) {
-	for i := 0; i < 240; i += 1 {
-		c := table16x15[i]
+	for i, c := range table16x15 {
 		result[i] = data[c.R][c.C]
 	}
 }
 
 func zigzag16x16[T Signed](data [][]T, result []T) {
-	for i := 0; i < 256; i += 1 {
-		c := table16x16[i]
+	for i, c := range table16x16 {
 		result[i] = data[c.R][c.C]
 	}
 }
 
 func zigzag32x31[T Signed](data [][]T, result []T) {
-	for i := 0; i < 992; i += 1 {
-		c := table32x31[i]
+	for i, c := range table32x31 {
 		result[i] = data[c.R][c.C]
 	}
 }
 
 func zigzag32x32[T Signed](data [][]T, result []T) {
-	for i := 0; i < 1024; i += 1 {
-		c := table32x32[i]
+	for i, c := range table32x32 {
 		result[i] = data[c.R][c.C]
 	}
 }
@@ -87,42 +81,37 @@ func Zigzag[T Signed](data [][]T, rows, cols int) (result []T) {
 }
 
 func unzigzag8x7[T Signed](data []T, result [][]T) {
-	for i := 0; i < 56; i += 1 {
-		c := table8x7[i]
+	for i, c := range table8x7 {
 		result[c.R][c.C] = data[i]
 	}
 }
 
 func unzigzag8x8[T Signed](data []T, result [][]T) {
-	for i := 0; i < 64; i += 1 {
-		c := table8x8[i]
+	for i, c := range table8x8 {
 		result[c.R][c.C] = data[i]
 	}
 }
 
 func unzigzag16x15[T Signed](data []T, result [][]T) {
-	for i := 0; i < 240; i += 1 {
-		c := table16x15[i]
+	for i, c := range table16x15 {
 		result[c.R][c.C] = data[i]
 	}
 }
 
 func unzigzag16x16[T Signed](data []T, result [][]T) {
-	for i := 0; i < 256; i += 1 {
-		c := table16x16[i]
+	for i, c := range table16x16 {
 		result[c.R][c.C] = data[i]
 	}
 }
 
 func unzigzag32x31[T Signed](data []T, result [][]T) {
-	for i := 0; i < 992; i += 1 {
-		c := table32x31[i]
+	for i, c := range table32x31 {
 		result[c.R][c.C] = data[i]
 	}
 }
 
 func unzigzag32x32[T Signed](data []T, result [][]T) {
-	for i := 0; i < 1024; i += 1 {
+	for i, c := range table32x32 {
 		c := table32x32[i]
 		result[c.R][c.C] = data[i]
 	}
