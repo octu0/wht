@@ -14,16 +14,18 @@ import (
 
 func dcDecode(in io.Reader, size int) ([]int16, error) {
 	rw := NewRiceReader[uint16](NewBitReader(in))
-	dc, err := dcRleDecode(rw, size)
+	data, err := dcRLEDecode(rw, size)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	// uint16 -> int16
+	dc := unsafe.Slice((*int16)(unsafe.Pointer(&data[0])), len(data))
 	return dc, nil
 }
 
 func acDecode(in io.Reader, rows, cols int) ([]int8, error) {
 	rw := NewRiceReader[uint8](NewBitReader(in))
-	data, err := rleDecode(rw, rows, cols)
+	data, err := acRLEDecode(rw, rows, cols)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

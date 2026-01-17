@@ -14,8 +14,10 @@ import (
 )
 
 func dcEncode(out io.Writer, dc []int16, size int) error {
+	// int16 -> uint16
+	data := unsafe.Slice((*uint16)(unsafe.Pointer(&dc[0])), len(dc))
 	rw := NewRiceWriter[uint16](NewBitWriter(out))
-	if err := dcRleEncode(rw, dc); err != nil {
+	if err := dcRLEEncode(rw, data); err != nil {
 		return errors.WithStack(err)
 	}
 	if err := rw.Flush(); err != nil {
@@ -28,7 +30,7 @@ func acEncode(out io.Writer, zigzag []int8) error {
 	// int8 -> uint8
 	data := unsafe.Slice((*uint8)(unsafe.Pointer(&zigzag[0])), len(zigzag))
 	rw := NewRiceWriter[uint8](NewBitWriter(out))
-	if err := rleEncode(rw, data); err != nil {
+	if err := acRLEEncode(rw, data); err != nil {
 		return errors.WithStack(err)
 	}
 	if err := rw.Flush(); err != nil {
