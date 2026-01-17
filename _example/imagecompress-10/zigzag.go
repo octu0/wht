@@ -112,7 +112,6 @@ func unzigzag32x31[T Signed](data []T, result [][]T) {
 
 func unzigzag32x32[T Signed](data []T, result [][]T) {
 	for i, c := range table32x32 {
-		c := table32x32[i]
 		result[c.R][c.C] = data[i]
 	}
 }
