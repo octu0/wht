@@ -1,0 +1,94 @@
+package main
+
+// RateController 仮想バッファを用いてビットレートを制御し、
+// 適切な量子化シフト量(baseShift)を決定する。
+type RateController struct {
+	maxbit             int
+	totalProcessPixels int
+	currentBits        int
+	processedPixels    int
+	baseShift          int
+}
+
+func (rc *RateController) CalcScale(addedBits, addedPixels int) int {
+	rc.currentBits += addedBits
+	rc.processedPixels += addedPixels
+
+	// 現在の進捗における理想的な消費ビット数
+	targetBitsProgress := int(float64(rc.maxbit) * (float64(rc.processedPixels) / float64(rc.totalProcessPixels)))
+
+	// 目標からの乖離 (Virtual Buffer)
+	diff := rc.currentBits - targetBitsProgress
+	threshold := rc.maxbit / 10
+
+	switch {
+	case threshold < diff:
+		rc.baseShift++
+		// 調整をマイルドにするため、仮想バッファの一部を解消したことにする
+		rc.currentBits -= threshold / 2
+	case diff < -threshold:
+		if 0 < rc.baseShift {
+			rc.baseShift--
+			rc.currentBits += threshold / 2
+		}
+	}
+
+	if rc.baseShift < 0 {
+		rc.baseShift = 0
+	}
+	if 8 < rc.baseShift {
+		rc.baseShift = 8
+	}
+
+	return rc.baseShift
+}
+
+func newRateController(maxbit int, width, height int) *RateController {
+	totalPixels := width * height
+	// Y + Cb + Cr の合計ピクセル数で進捗を管理
+	totalProcessPixels := totalPixels + (totalPixels / 2)
+
+	return &RateController{
+		maxbit:             maxbit,
+		totalProcessPixels: totalProcessPixels,
+		currentBits:        0,
+		processedPixels:    0,
+		baseShift:          0,
+	}
+}
+
+type rowFunc func(x, y int, size int, prediction int16) []int16
+
+type scale struct {
+	minVal, maxVal int16
+	rowFn          rowFunc
+}
+
+func (s *scale) Rows(w, h int, size int, prediction int16, baseShift int) ([][]int16, int) {
+	rows := make([][]int16, size)
+	s.minVal = 32767
+	s.maxVal = -32768
+	for i := 0; i < size; i += 1 {
+		r := s.rowFn(w, h+i, size, prediction)
+		rows[i] = r
+		for _, v := range r {
+			if v < s.minVal {
+				s.minVal = v
+			}
+			if s.maxVal < v {
+				s.maxVal = v
+			}
+		}
+	}
+
+	localScale := baseShift
+	return rows, localScale
+}
+
+func newScale(rowFn rowFunc) *scale {
+	return &scale{
+		minVal: 32767,
+		maxVal: -32768,
+		rowFn:  rowFn,
+	}
+}
