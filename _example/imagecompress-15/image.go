@@ -53,39 +53,12 @@ type ImageReader struct {
 	width, height uint16
 }
 
-func (r *ImageReader) headtailY(w, h int, n int) (uint8, uint8) {
-	i := (h * r.img.YStride) + w
-	if len(r.img.Y) < i {
-		return 0, 0
-	}
-	if len(r.img.Y) < i+n {
-		return r.img.Y[i], 0
-	}
-	return r.img.Y[i], r.img.Y[i+n]
+func (r *ImageReader) Width() uint16 {
+	return r.width
 }
 
-func (r *ImageReader) headtailCb(w, h int, n int) (uint8, uint8) {
-	i1 := r.img.COffset(w*2, h*2)
-	i2 := r.img.COffset((w+n)*2, h*2)
-	if len(r.img.Cb) <= i1 {
-		return 0, 0
-	}
-	if len(r.img.Cb) <= i2 {
-		return r.img.Cb[i1], 0
-	}
-	return r.img.Cb[i1], r.img.Cb[i2]
-}
-
-func (r *ImageReader) headtailCr(w, h int, n int) (uint8, uint8) {
-	i1 := r.img.COffset(w*2, h*2)
-	i2 := r.img.COffset((w+n)*2, h*2)
-	if len(r.img.Cr) <= i1 {
-		return 0, 0
-	}
-	if len(r.img.Cr) <= i2 {
-		return r.img.Cr[i1], 0
-	}
-	return r.img.Cr[i1], r.img.Cr[i2]
+func (r *ImageReader) Height() uint16 {
+	return r.height
 }
 
 func (r *ImageReader) RowY(x, y uint16, size uint16, prediction int16) []int16 {

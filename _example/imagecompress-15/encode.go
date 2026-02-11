@@ -89,8 +89,7 @@ func encode(img *image.YCbCr, maxbitrate int) ([]byte, error) {
 	bufCr := make([]*bytes.Buffer, 0)
 
 	r := newImageReader(img)
-	b := img.Bounds()
-	dx, dy := uint16(b.Dx()), uint16(b.Dy())
+	dx, dy := r.Width(), r.Height()
 
 	scaleVal := 1
 	scaleY := newScale(r.RowY)
