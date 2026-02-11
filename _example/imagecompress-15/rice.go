@@ -52,6 +52,80 @@ func NewBitWriter(out io.Writer) *BitWriter {
 	return &BitWriter{out: out}
 }
 
+type RiceWriter[T Unsigned] struct {
+	bw        *BitWriter
+	maxVal    T
+	zeroCount T
+	lastK     uint8
+}
+
+func (w *RiceWriter[T]) writePrimitive(val T, k uint8) error {
+	m := T(1) << k
+	q := val / m
+	r := val % m
+
+	for i := T(0); i < q; i++ {
+		if err := w.bw.WriteBit(1); err != nil {
+			return err
+		}
+	}
+	if err := w.bw.WriteBit(0); err != nil {
+		return err
+	}
+
+	return w.bw.WriteBits(uint16(r), k)
+}
+
+func (w *RiceWriter[T]) Write(val T, k uint8) error {
+	w.lastK = k
+
+	if val == 0 {
+		if w.zeroCount == w.maxVal {
+			if err := w.flushZeros(k); err != nil {
+				return err
+			}
+		}
+		w.zeroCount += 1
+		return nil
+	}
+
+	if 0 < w.zeroCount {
+		if err := w.flushZeros(k); err != nil {
+			return err
+		}
+	}
+
+	return w.writePrimitive(val, k)
+}
+
+func (w *RiceWriter[T]) flushZeros(k uint8) error {
+	if w.zeroCount == 0 {
+		return nil
+	}
+	if err := w.writePrimitive(0, k); err != nil {
+		return err
+	}
+	if err := w.writePrimitive(w.zeroCount, k); err != nil {
+		return err
+	}
+
+	w.zeroCount = 0
+	return nil
+}
+
+func (w *RiceWriter[T]) Flush() error {
+	if 0 < w.zeroCount {
+		if err := w.flushZeros(w.lastK); err != nil {
+			return err
+		}
+	}
+	return w.bw.Flush()
+}
+
+func NewRiceWriter[T Unsigned](bw *BitWriter) *RiceWriter[T] {
+	return &RiceWriter[T]{bw: bw, maxVal: ^T(0)}
+}
+
 type BitReader struct {
 	r     io.Reader
 	cache byte
@@ -88,40 +162,12 @@ func NewBitReader(r io.Reader) *BitReader {
 	return &BitReader{r: r}
 }
 
-type RiceWriter[T Unsigned] struct {
-	bw *BitWriter
-}
-
-func (w *RiceWriter[T]) Write(val T, k uint8) error {
-	m := T(1) << k
-	q := val / m
-	r := val % m
-
-	for i := T(0); i < q; i += 1 {
-		if err := w.bw.WriteBit(1); err != nil {
-			return err
-		}
-	}
-	if err := w.bw.WriteBit(0); err != nil {
-		return err
-	}
-
-	return w.bw.WriteBits(uint16(r), k)
-}
-
-func (w *RiceWriter[T]) Flush() error {
-	return w.bw.Flush()
-}
-
-func NewRiceWriter[T Unsigned](bw *BitWriter) *RiceWriter[T] {
-	return &RiceWriter[T]{bw: bw}
-}
-
 type RiceReader[T Unsigned] struct {
-	br *BitReader
+	br           *BitReader
+	pendingZeros int
 }
 
-func (r *RiceReader[T]) ReadRice(k uint8) (T, error) {
+func (r *RiceReader[T]) readPrimitive(k uint8) (T, error) {
 	q := T(0)
 	for {
 		bit, err := r.br.ReadBit()
@@ -138,9 +184,31 @@ func (r *RiceReader[T]) ReadRice(k uint8) (T, error) {
 	if err != nil {
 		return 0, err
 	}
-	rem := T(rem64)
+	val := (q << k) | T(rem64)
+	return val, nil
+}
 
-	val := (q << k) | rem
+func (r *RiceReader[T]) Read(k uint8) (T, error) {
+	if 0 < r.pendingZeros {
+		r.pendingZeros -= 1
+		return 0, nil
+	}
+
+	val, err := r.readPrimitive(k)
+	if err != nil {
+		return 0, err
+	}
+
+	if val == 0 {
+		count, err := r.readPrimitive(k)
+		if err != nil {
+			return 0, err
+		}
+
+		r.pendingZeros = int(count) - 1
+		return 0, nil
+	}
+
 	return val, nil
 }
 

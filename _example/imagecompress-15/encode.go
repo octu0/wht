@@ -11,82 +11,49 @@ import (
 	"github.com/pkg/errors"
 )
 
-func blockEncode(out io.Writer, block []int16, size uint16) error {
-	// int16 -> uint16
-	data := unsafe.Slice((*uint16)(unsafe.Pointer(&block[0])), len(block))
-	rw := NewRiceWriter[uint16](NewBitWriter(out))
-	if err := blockRLEEncode(rw, data); err != nil {
-		return errors.WithStack(err)
-	}
-	if err := rw.Flush(); err != nil {
-		return errors.WithStack(err)
+const (
+	k uint8 = 1
+)
+
+func blockEncode(rw *RiceWriter[uint16], block [][]int16, size uint16) error {
+	for y := uint16(0); y < size; y += 1 {
+		// int16 -> uint16
+		data := unsafe.Slice((*uint16)(unsafe.Pointer(&block[y][0])), len(block[y]))
+		for x := uint16(0); x < size; x += 1 {
+			if err := rw.Write(data[x], k); err != nil {
+				return errors.WithStack(err)
+			}
+		}
 	}
 	return nil
 }
 
 func transform(out io.Writer, data [][]int16, size uint16, scale int, isChroma bool) error {
-	dwtBlock2Level(data, size)
+	sub := dwt2d(data, size)
 
-	// HH1サブバンド(ブロックの右下領域)の解析によるフラット判定
-	// Chroma plane の場合は色再現性を優先するため、動的な引き上げを抑制する
-	if isChroma == false {
-		half := size / 2
-		sum := 0
-		count := 0
-		hhElements := make([]int, 0)
-		for y := half; y < size; y++ {
-			for x := half; x < size; x++ {
-				v := int(data[y][x])
-				if v < 0 {
-					v = -v
-				}
-				hhElements = append(hhElements, v)
-				sum += v
-				count++
-			}
-		}
-
-		if 0 < count {
-			avg := float64(sum) / float64(count)
-
-			// 前方10%と後方10%の平均を比較して分布の安定性を確認
-			count10 := count / 10
-			if 0 < count10 {
-				sumFront, sumBack := 0, 0
-				for i := 0; i < count10; i++ {
-					sumFront += hhElements[i]
-					sumBack += hhElements[len(hhElements)-1-i]
-				}
-				avgFront := float64(sumFront) / float64(count10)
-				avgBack := float64(sumBack) / float64(count10)
-
-				diff := avgFront - avgBack
-				if diff < 0 {
-					diff = -diff
-				}
-
-				// 非常にフラットな場合のみ scale を調整
-				if avg < 1.5 && diff < 0.5 {
-					scale += 2
-				} else if avg < 3.0 && diff < 1.0 {
-					scale += 1
-				}
-			}
-		}
-	}
-
-	if 15 < scale {
-		scale = 15
-	}
+	quantizeLow(sub.LL, sub.Size, scale)
+	quantizeMid(sub.HL, sub.Size, scale)
+	quantizeMid(sub.LH, sub.Size, scale)
+	quantizeHigh(sub.HH, sub.Size, scale)
 
 	if err := binary.Write(out, binary.BigEndian, uint8(scale)); err != nil {
 		return errors.WithStack(err)
 	}
 
-	quantizeBlock(data, size, scale)
-
-	zigzag := Zigzag(data, size)
-	if err := blockEncode(out, zigzag, size); err != nil {
+	rw := NewRiceWriter[uint16](NewBitWriter(out))
+	if err := blockEncode(rw, sub.LL, sub.Size); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := blockEncode(rw, sub.HL, sub.Size); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := blockEncode(rw, sub.LH, sub.Size); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := blockEncode(rw, sub.HH, sub.Size); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := rw.Flush(); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
@@ -104,14 +71,14 @@ func transformHandlerFunc(w, h uint16, size uint16, predict predictFunc, updateP
 		return nil, errors.WithStack(err)
 	}
 
-	// Local Reconstruction: DWTはブロック単位なので、一度デコードしてから一括更新
-	planes, err := invert(bytes.NewReader(data.Bytes()), size)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	for i := uint16(0); i < size; i += 1 {
-		updatePredict(w, h+i, size, planes[i], prediction)
-	}
+	//// Local Reconstruction: DWTはブロック単位なので、一度デコードしてから一括更新
+	//planes, err := invert(bytes.NewReader(data.Bytes()), size)
+	//if err != nil {
+	//	return nil, errors.WithStack(err)
+	//}
+	//for i := uint16(0); i < size; i += 1 {
+	//	updatePredict(w, h+i, size, planes[i], prediction)
+	//}
 	return data, nil
 }
 
@@ -130,53 +97,40 @@ func encode(img *image.YCbCr, maxbitrate int) ([]byte, error) {
 	tmp := newImagePredictor(img.Bounds())
 	for h := uint16(0); h < dy; h += 32 {
 		for w := uint16(0); w < dx; w += 32 {
-      data, err := transformHandlerFunc(w, h, 32, tmp.PredictY, tmp.UpdateY, scaleY, scaleVal, false)
-      if err != nil {
-        panic(fmt.Sprintf("%+v", err))
-      }
-      bufY = append(bufY, data)
-      scaleVal = scaler.CalcScale(data.Len()*8, 32*32)
+			data, err := transformHandlerFunc(w, h, 32, tmp.PredictY, tmp.UpdateY, scaleY, scaleVal, false)
+			if err != nil {
+				panic(fmt.Sprintf("%+v", err))
+			}
+			bufY = append(bufY, data)
+			scaleVal = scaler.CalcScale(data.Len()*8, 32*32)
 		}
 	}
 
 	scaleCb := newScale(r.RowCb)
 	for h := uint16(0); h < dy/2; h += 32 {
 		for w := uint16(0); w < dx/2; w += 32 {
-      data, err := transformHandlerFunc(w, h, 32, tmp.PredictCb, tmp.UpdateCb, scaleCb, scaleVal, true)
-      if err != nil {
-        panic(fmt.Sprintf("%+v", err))
-      }
-      bufCb = append(bufCb, data)
-      scaleVal = scaler.CalcScale(data.Len()*8, 32*32)
+			data, err := transformHandlerFunc(w, h, 32, tmp.PredictCb, tmp.UpdateCb, scaleCb, scaleVal, true)
+			if err != nil {
+				panic(fmt.Sprintf("%+v", err))
+			}
+			bufCb = append(bufCb, data)
+			scaleVal = scaler.CalcScale(data.Len()*8, 32*32)
 		}
 	}
 
 	scaleCr := newScale(r.RowCr)
 	for h := uint16(0); h < dy/2; h += 32 {
 		for w := uint16(0); w < dx/2; w += 32 {
-      data, err := transformHandlerFunc(w, h, 32, tmp.PredictCr, tmp.UpdateCr, scaleCr, scaleVal, true)
-      if err != nil {
-        panic(fmt.Sprintf("%+v", err))
-      }
-      bufCr = append(bufCr, data)
-      scaleVal = scaler.CalcScale(data.Len()*8, 32*32)
+			data, err := transformHandlerFunc(w, h, 32, tmp.PredictCr, tmp.UpdateCr, scaleCr, scaleVal, true)
+			if err != nil {
+				panic(fmt.Sprintf("%+v", err))
+			}
+			bufCr = append(bufCr, data)
+			scaleVal = scaler.CalcScale(data.Len()*8, 32*32)
 		}
 	}
 
-	ySize := 0
-	for _, b := range bufY {
-		ySize += b.Len()
-	}
-	cbSize := 0
-	for _, b := range bufCb {
-		cbSize += b.Len()
-	}
-	crSize := 0
-	for _, b := range bufCr {
-		crSize += b.Len()
-	}
-
-	out := bytes.NewBuffer(make([]byte, 0, 2+2+ySize+cbSize+crSize))
+	out := bytes.NewBuffer(nil)
 
 	if err := binary.Write(out, binary.BigEndian, dx); err != nil {
 		return nil, errors.WithStack(err)
@@ -185,7 +139,7 @@ func encode(img *image.YCbCr, maxbitrate int) ([]byte, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	if err := binary.Write(out, binary.BigEndian, uint32(ySize)); err != nil {
+	if err := binary.Write(out, binary.BigEndian, uint16(len(bufY))); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	for _, b := range bufY {
@@ -196,7 +150,7 @@ func encode(img *image.YCbCr, maxbitrate int) ([]byte, error) {
 			return nil, errors.WithStack(err)
 		}
 	}
-	if err := binary.Write(out, binary.BigEndian, uint32(cbSize)); err != nil {
+	if err := binary.Write(out, binary.BigEndian, uint16(len(bufCb))); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	for _, b := range bufCb {
@@ -207,7 +161,7 @@ func encode(img *image.YCbCr, maxbitrate int) ([]byte, error) {
 			return nil, errors.WithStack(err)
 		}
 	}
-	if err := binary.Write(out, binary.BigEndian, uint32(crSize)); err != nil {
+	if err := binary.Write(out, binary.BigEndian, uint16(len(bufCr))); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	for _, b := range bufCr {

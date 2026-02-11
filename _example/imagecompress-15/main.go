@@ -13,6 +13,15 @@ var (
 	srcPng []byte
 )
 
+func printSubband(data [][]int16) {
+	for _, row := range data {
+		for _, val := range row {
+			fmt.Printf("%3d ", val)
+		}
+		fmt.Println()
+	}
+}
+
 func main() {
 	ycbcr, err := pngToYCbCr(srcPng)
 	if err != nil {
@@ -20,7 +29,7 @@ func main() {
 	}
 
 	srcbit := ycbcr.Bounds().Dx() * ycbcr.Bounds().Dy() * 8
-	maxbit := 500 * 1000
+	maxbit := 100 * 1000
 	fmt.Printf("src %d bit\n", srcbit)
 	fmt.Printf("target %d bit = %3.2f%%\n", maxbit, (float64(maxbit)/float64(srcbit))*100)
 

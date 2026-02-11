@@ -1,16 +1,20 @@
 package main
 
-// lift53 は LeGall 5/3 DWT のリフティング実装です。
-func lift53(arr []int16) {
-	n := len(arr)
+type Subbands struct {
+	LL, HL, LH, HH [][]int16
+	Size           uint16
+}
+
+func lift53(data []int16) {
+	n := len(data)
 	half := n / 2
 	low := make([]int16, half)
 	high := make([]int16, half)
-	for i := 0; i < half; i++ {
-		low[i] = arr[2*i]
-		high[i] = arr[2*i+1]
+	for i := 0; i < half; i += 1 {
+		low[i] = data[2*i]
+		high[i] = data[2*i+1]
 	}
-	for i := 0; i < half; i++ { // Predict
+	for i := 0; i < half; i += 1 { // Predict
 		l, r := int32(low[i]), int32(low[i])
 		if i+1 < half {
 			r = int32(low[i+1])
@@ -19,24 +23,24 @@ func lift53(arr []int16) {
 	}
 	for i := 0; i < half; i++ { // Update
 		d, dp := int32(high[i]), int32(high[i])
-		if i-1 >= 0 {
+		if 0 <= i-1 {
 			dp = int32(high[i-1])
 		}
 		low[i] += int16((dp + d + 2) >> 2)
 	}
-	for i := 0; i < half; i++ {
-		arr[i] = low[i]
-		arr[half+i] = high[i]
+	for i := 0; i < half; i += 1 {
+		data[i] = low[i]
+		data[half+i] = high[i]
 	}
 }
 
-func invLift53(arr []int16) {
-	n := len(arr)
+func invLift53(data []int16) {
+	n := len(data)
 	half := n / 2
 	low := make([]int16, half)
 	high := make([]int16, half)
-	copy(low, arr[:half])
-	copy(high, arr[half:])
+	copy(low, data[:half])
+	copy(high, data[half:])
 	for i := 0; i < half; i++ { // Inv Update
 		d, dp := int32(high[i]), int32(high[i])
 		if i-1 >= 0 {
@@ -52,72 +56,108 @@ func invLift53(arr []int16) {
 		high[i] += int16((l + r) >> 1)
 	}
 	for i := 0; i < half; i++ {
-		arr[2*i] = low[i]
-		arr[2*i+1] = high[i]
+		data[2*i] = low[i]
+		data[2*i+1] = high[i]
 	}
 }
 
-// dwtBlock は 2次元の DWT を行います。
-func dwtBlock(data [][]int16, size uint16) {
-	buf := make([]int16, size)
-	// Row transform
-	for y := uint16(0); y < size; y++ {
-		lift53(data[y][:size])
+func dwt2d(data [][]int16, size uint16) Subbands {
+	for y := uint16(0); y < size; y += 1 {
+		lift53(data[y])
 	}
-	// Col transform
-	for x := uint16(0); x < size; x++ {
-		for y := uint16(0); y < size; y++ {
-			buf[y] = data[y][x]
+
+	col := make([]int16, size)
+	for x := uint16(0); x < size; x += 1 {
+		for y := uint16(0); y < size; y += 1 {
+			col[y] = data[y][x]
 		}
-		lift53(buf)
-		for y := uint16(0); y < size; y++ {
-			data[y][x] = buf[y]
+		lift53(col)
+		for y := uint16(0); y < size; y += 1 {
+			data[y][x] = col[y]
 		}
 	}
+
+	half := (size + 1) / 2
+
+	sub := Subbands{
+		LL:   make([][]int16, half),
+		HL:   make([][]int16, half),
+		LH:   make([][]int16, half),
+		HH:   make([][]int16, half),
+		Size: half,
+	}
+
+	for y := uint16(0); y < half; y += 1 {
+		sub.LL[y] = make([]int16, half)
+		sub.HL[y] = make([]int16, half)
+		sub.LH[y] = make([]int16, half)
+		sub.HH[y] = make([]int16, half)
+	}
+
+	for y := uint16(0); y < half; y += 1 {
+		for x := uint16(0); x < size; x += 1 {
+			val := data[y][x]
+			if x < half {
+				sub.LL[y][x] = val // Top-Left
+			} else {
+				sub.HL[y][x-half] = val // Top-Right
+			}
+		}
+	}
+	for y := half; y < size; y += 1 {
+		for x := uint16(0); x < size; x += 1 {
+			val := data[y][x]
+			if x < half {
+				sub.LH[y-half][x] = val // Bottom-Left
+			} else {
+				sub.HH[y-half][x-half] = val // Bottom-Right
+			}
+		}
+	}
+	return sub
 }
 
-// invDwtBlock は 2次元の IDWT を行います。
-func invDwtBlock(data [][]int16, size uint16) {
-	buf := make([]int16, size)
-	// Inv Col transform
-	for x := uint16(0); x < size; x++ {
-		for y := uint16(0); y < size; y++ {
-			buf[y] = data[y][x]
-		}
-		invLift53(buf)
-		for y := uint16(0); y < size; y++ {
-			data[y][x] = buf[y]
-		}
-	}
-	// Inv Row transform
-	for y := uint16(0); y < size; y++ {
-		invLift53(data[y][:size])
-	}
-}
+func invDwt2d(sub Subbands) [][]int16 {
+	half := sub.Size
+	size := sub.Size * 2
 
-// dwtBlock2Level は 2層の 2次元 DWT を行います。
-func dwtBlock2Level(data [][]int16, size uint16) {
-	dwtBlock(data, size)
-	if size < 16 {
-		return
+	data := make([][]int16, size)
+	for y := uint16(0); y < size; y += 1 {
+		data[y] = make([]int16, size)
 	}
-	half := size / 2
-	ll := make([][]int16, half)
-	for y := uint16(0); y < half; y++ {
-		ll[y] = data[y][:half]
-	}
-	dwtBlock(ll, half)
-}
 
-// invDwtBlock2Level は 2層の 2次元 IDWT を行います。
-func invDwtBlock2Level(data [][]int16, size uint16) {
-	if size >= 16 {
-		half := size / 2
-		ll := make([][]int16, half)
-		for y := uint16(0); y < half; y++ {
-			ll[y] = data[y][:half]
+	for y := uint16(0); y < half; y += 1 {
+		for x := uint16(0); x < size; x += 1 {
+			if x < half {
+				data[y][x] = sub.LL[y][x]
+			} else {
+				data[y][x] = sub.HL[y][x-half]
+			}
 		}
-		invDwtBlock(ll, half)
 	}
-	invDwtBlock(data, size)
+	for y := half; y < size; y += 1 {
+		for x := uint16(0); x < size; x += 1 {
+			if x < half {
+				data[y][x] = sub.LH[y-half][x]
+			} else {
+				data[y][x] = sub.HH[y-half][x-half]
+			}
+		}
+	}
+
+	col := make([]int16, size)
+	for x := uint16(0); x < size; x += 1 {
+		for y := uint16(0); y < size; y += 1 {
+			col[y] = data[y][x]
+		}
+		invLift53(col)
+		for y := uint16(0); y < size; y += 1 {
+			data[y][x] = col[y]
+		}
+	}
+
+	for y := uint16(0); y < size; y += 1 {
+		invLift53(data[y])
+	}
+	return data
 }
