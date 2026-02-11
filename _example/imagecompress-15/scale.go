@@ -1,7 +1,5 @@
 package main
 
-// RateController は hoge.go の設計に基づき、仮想バッファを用いて
-// ビットレートを制御し、適切な量子化シフト量(baseShift)を決定します。
 type RateController struct {
 	maxbit             int
 	totalProcessPixels int
@@ -14,17 +12,13 @@ func (rc *RateController) CalcScale(addedBits, addedPixels int) int {
 	rc.currentBits += addedBits
 	rc.processedPixels += addedPixels
 
-	// 現在の進捗における理想的な消費ビット数
 	targetBitsProgress := int(float64(rc.maxbit) * (float64(rc.processedPixels) / float64(rc.totalProcessPixels)))
 
-	// 目標からの乖離 (Virtual Buffer)
 	diff := rc.currentBits - targetBitsProgress
 	threshold := rc.maxbit / 10
 
-	// 乖離に応じて baseShift を段階的に変更
 	if diff > threshold {
 		rc.baseShift++
-		// 調整をマイルドにするため、仮想バッファの一部を解消したことにする
 		rc.currentBits -= threshold / 2
 	} else if diff < -threshold {
 		if rc.baseShift > 0 {
@@ -45,7 +39,6 @@ func (rc *RateController) CalcScale(addedBits, addedPixels int) int {
 
 func newRateController(maxbit int, width, height uint16) *RateController {
 	totalPixels := width * height
-	// Y + Cb + Cr の合計ピクセル数で進捗を管理
 	totalProcessPixels := int(totalPixels + (totalPixels / 2))
 
 	return &RateController{
@@ -53,7 +46,7 @@ func newRateController(maxbit int, width, height uint16) *RateController {
 		totalProcessPixels: totalProcessPixels,
 		currentBits:        0,
 		processedPixels:    0,
-		baseShift:          2, // 初期値を引き上げ
+		baseShift:          2,
 	}
 }
 

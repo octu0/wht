@@ -5,24 +5,26 @@ import (
 	"encoding/binary"
 	"image"
 	"io"
-	"unsafe"
 
 	"github.com/pkg/errors"
 )
 
+func toInt16(u uint16) int16 {
+	return int16(u>>1) ^ -int16(u&1)
+}
+
 func blockDecode(rr *RiceReader[uint16], size uint16) ([][]int16, error) {
 	data := make([][]int16, size)
 	for y := uint16(0); y < size; y += 1 {
-		tmp := make([]uint16, size)
+		tmp := make([]int16, size)
 		for x := uint16(0); x < size; x += 1 {
 			v, err := rr.Read(k)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
-			tmp[x] = v
+			tmp[x] = toInt16(v)
 		}
-		// uint16 -> int16
-		data[y] = unsafe.Slice((*int16)(unsafe.Pointer(&tmp[0])), len(tmp))
+		data[y] = tmp
 	}
 	return data, nil
 }
@@ -104,7 +106,7 @@ func decode(r io.Reader) (*image.YCbCr, error) {
 			return nil, errors.WithStack(err)
 		}
 		buf := make([]byte, blockLen)
-		if _, err := r.Read(buf); err != nil {
+		if _, err := io.ReadFull(r, buf); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		yBufs[i] = buf
@@ -122,7 +124,7 @@ func decode(r io.Reader) (*image.YCbCr, error) {
 			return nil, errors.WithStack(err)
 		}
 		buf := make([]byte, blockLen)
-		if _, err := r.Read(buf); err != nil {
+		if _, err := io.ReadFull(r, buf); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		cbBufs[i] = buf
@@ -140,7 +142,7 @@ func decode(r io.Reader) (*image.YCbCr, error) {
 			return nil, errors.WithStack(err)
 		}
 		buf := make([]byte, blockLen)
-		if _, err := r.Read(buf); err != nil {
+		if _, err := io.ReadFull(r, buf); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		crBufs[i] = buf

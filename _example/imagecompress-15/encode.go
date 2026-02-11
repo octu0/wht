@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"io"
-	"unsafe"
 
 	"github.com/pkg/errors"
 )
@@ -15,12 +14,14 @@ const (
 	k uint8 = 1
 )
 
+func toUint16(n int16) uint16 {
+	return uint16((n << 1) ^ (n >> 15))
+}
+
 func blockEncode(rw *RiceWriter[uint16], block [][]int16, size uint16) error {
 	for y := uint16(0); y < size; y += 1 {
-		// int16 -> uint16
-		data := unsafe.Slice((*uint16)(unsafe.Pointer(&block[y][0])), len(block[y]))
 		for x := uint16(0); x < size; x += 1 {
-			if err := rw.Write(data[x], k); err != nil {
+			if err := rw.Write(toUint16(block[y][x]), k); err != nil {
 				return errors.WithStack(err)
 			}
 		}
@@ -71,14 +72,14 @@ func transformHandlerFunc(w, h uint16, size uint16, predict predictFunc, updateP
 		return nil, errors.WithStack(err)
 	}
 
-	//// Local Reconstruction: DWTはブロック単位なので、一度デコードしてから一括更新
-	//planes, err := invert(bytes.NewReader(data.Bytes()), size)
-	//if err != nil {
-	//	return nil, errors.WithStack(err)
-	//}
-	//for i := uint16(0); i < size; i += 1 {
-	//	updatePredict(w, h+i, size, planes[i], prediction)
-	//}
+	// Local Reconstruction: DWTはブロック単位なので、一度デコードしてから一括更新
+	planes, err := invert(bytes.NewReader(data.Bytes()), size)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	for i := uint16(0); i < size; i += 1 {
+		updatePredict(w, h+i, size, planes[i], prediction)
+	}
 	return data, nil
 }
 
