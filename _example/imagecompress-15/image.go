@@ -178,31 +178,112 @@ func newImagePredictor(rect image.Rectangle) *ImagePredictor {
 	}
 }
 
-type headtailFunc func(w, h int, n int) (uint8, uint8)
-
-func similarblock(w, h int, size int, headtail headtailFunc) bool {
-	h0, t0 := headtail(w, h, size)
-	h1, t1 := headtail(w, h+(size-1), size)
-
-	mi := min(min(h0, h1), min(t0, t1))
-	ma := max(max(h0, h1), max(t0, t1))
-	if (ma - mi) < 48 { // 48/255 = 0.1882
-		return true
-	}
-	return false
+type Image16 struct {
+	Y, Cb, Cr     [][]int16
+	Width, Height uint16
 }
 
-func similarblockNeighbor(w, h int, size, next int, headtail headtailFunc) bool {
-	h0, t0 := headtail(w, h, size)
-	h1, t1 := headtail(w, h+(size-1), size)
-	h2, t2 := headtail(w, h+(size+next-1), size)
-
-	mi := min(min(min(h0, h1), min(t0, t1)), min(h2, t2))
-	ma := max(max(max(h0, h1), max(t0, t1)), max(h2, t2))
-	if (ma - mi) < 24 { // 24/255 = 0.0941
-		return true
+func (i *Image16) GetY(x, y uint16, size uint16) [][]int16 {
+	plane := make([][]int16, size)
+	for h := uint16(0); h < size; h += 1 {
+		plane[h] = make([]int16, size)
+		for w := uint16(0); w < size; w += 1 {
+			px, py := boundaryRepeat(i.Width, i.Height, x+w, y+h)
+			plane[h][w] = i.Y[py][px]
+		}
 	}
-	return false
+	return plane
+}
+
+func (i *Image16) GetCb(x, y uint16, size uint16) [][]int16 {
+	plane := make([][]int16, size)
+	for h := uint16(0); h < size; h += 1 {
+		plane[h] = make([]int16, size)
+		for w := uint16(0); w < size; w += 1 {
+			px, py := boundaryRepeat(i.Width/2, i.Height/2, x+w, y+h)
+			plane[h][w] = i.Cb[py][px]
+		}
+	}
+	return plane
+}
+
+func (i *Image16) GetCr(x, y uint16, size uint16) [][]int16 {
+	plane := make([][]int16, size)
+	for h := uint16(0); h < size; h += 1 {
+		plane[h] = make([]int16, size)
+		for w := uint16(0); w < size; w += 1 {
+			px, py := boundaryRepeat(i.Width/2, i.Height/2, x+w, y+h)
+			plane[h][w] = i.Cr[py][px]
+		}
+	}
+	return plane
+}
+
+func (i *Image16) UpdateY(data [][]int16, prediction int16, startX, startY uint16, size uint16) {
+	for h := uint16(0); h < size; h += 1 {
+		if i.Height <= startY+h {
+			continue
+		}
+		for w := uint16(0); w < size; w += 1 {
+			i.Y[startY+h][startX+w] = data[h][w] + prediction
+		}
+	}
+}
+
+func (i *Image16) UpdateCb(data [][]int16, prediction int16, startX, startY uint16, size uint16) {
+	for h := uint16(0); h < size; h += 1 {
+		if i.Height/2 <= startY+h {
+			continue
+		}
+		for w := uint16(0); w < size; w += 1 {
+			i.Cb[startY+h][startX+w] = data[h][w] + prediction
+		}
+	}
+}
+
+func (i *Image16) UpdateCr(data [][]int16, prediction int16, startX, startY uint16, size uint16) {
+	for h := uint16(0); h < size; h += 1 {
+		if i.Height/2 <= startY+h {
+			continue
+		}
+		for w := uint16(0); w < size; w += 1 {
+			i.Cr[startY+h][startX+w] = data[h][w] + prediction
+		}
+	}
+}
+
+func (i *Image16) ToYCbCr() *image.YCbCr {
+	rect := image.Rect(0, 0, int(i.Width), int(i.Height))
+	img := image.NewYCbCr(rect, image.YCbCrSubsampleRatio420)
+	for y := uint16(0); y < i.Height; y += 1 {
+		for x := uint16(0); x < i.Width; x += 1 {
+			img.Y[img.YOffset(int(x), int(y))] = clampU8(i.Y[y][x])
+		}
+	}
+	for y := uint16(0); y < i.Height/2; y += 1 {
+		for x := uint16(0); x < i.Width/2; x += 1 {
+			off := img.COffset(int(x*2), int(y*2))
+			img.Cb[off] = clampU8(i.Cb[y][x])
+			img.Cr[off] = clampU8(i.Cr[y][x])
+		}
+	}
+	return img
+}
+
+func NewImage16(width, height uint16) *Image16 {
+	y := make([][]int16, height)
+	for i := uint16(0); i < height; i += 1 {
+		y[i] = make([]int16, width) // zero clear
+	}
+	cb := make([][]int16, height/2)
+	for i := uint16(0); i < height/2; i += 1 {
+		cb[i] = make([]int16, width/2) // zero clear
+	}
+	cr := make([][]int16, height/2)
+	for i := uint16(0); i < height/2; i += 1 {
+		cr[i] = make([]int16, width/2) // zero clear
+	}
+	return &Image16{y, cb, cr, width, height}
 }
 
 func pngToYCbCr(data []byte) (*image.YCbCr, error) {

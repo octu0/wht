@@ -8,23 +8,25 @@ type RateController struct {
 	baseShift          int
 }
 
-func (rc *RateController) CalcScale(addedBits, addedPixels int) int {
+func (rc *RateController) CalcScale(addedBits int, addedPixels uint16) int {
 	rc.currentBits += addedBits
-	rc.processedPixels += addedPixels
+	rc.processedPixels += int(addedPixels)
 
-	targetBitsProgress := int(float64(rc.maxbit) * (float64(rc.processedPixels) / float64(rc.totalProcessPixels)))
+	// 処理済みピクセルに対する実際のBPP（bits per pixel）
+	actualBPP := float64(rc.currentBits) / float64(rc.processedPixels)
+	// 全体の目標BPP
+	targetBPP := float64(rc.maxbit) / float64(rc.totalProcessPixels)
 
-	diff := rc.currentBits - targetBitsProgress
-	threshold := rc.maxbit / 10
-
-	if diff > threshold {
-		rc.baseShift++
-		rc.currentBits -= threshold / 2
-	} else if diff < -threshold {
-		if rc.baseShift > 0 {
-			rc.baseShift--
-			rc.currentBits += threshold / 2
-		}
+	// 実際/目標の比率に基づいて baseShift を調整
+	ratio := actualBPP / targetBPP
+	if ratio > 2.0 {
+		rc.baseShift += 2
+	} else if ratio > 1.2 {
+		rc.baseShift += 1
+	} else if ratio < 0.5 && rc.baseShift > 0 {
+		rc.baseShift -= 2
+	} else if ratio < 0.8 && rc.baseShift > 0 {
+		rc.baseShift -= 1
 	}
 
 	if rc.baseShift < 0 {
@@ -35,19 +37,6 @@ func (rc *RateController) CalcScale(addedBits, addedPixels int) int {
 	}
 
 	return rc.baseShift
-}
-
-func newRateController(maxbit int, width, height uint16) *RateController {
-	totalPixels := width * height
-	totalProcessPixels := int(totalPixels + (totalPixels / 2))
-
-	return &RateController{
-		maxbit:             maxbit,
-		totalProcessPixels: totalProcessPixels,
-		currentBits:        0,
-		processedPixels:    0,
-		baseShift:          2,
-	}
 }
 
 type rowFunc func(x, y uint16, size uint16, prediction int16) []int16

@@ -5,11 +5,11 @@ func quantizeLow(block [][]int16, size uint16, scale int) {
 }
 
 func quantizeMid(block [][]int16, size uint16, scale int) {
-	quantize(block, size, scale+5)
+	quantize(block, size, scale+3)
 }
 
 func quantizeHigh(block [][]int16, size uint16, scale int) {
-	quantize(block, size, scale+7)
+	quantize(block, size, scale+5)
 }
 
 func quantize(data [][]int16, size uint16, scale int) {
@@ -31,11 +31,11 @@ func dequantizeLow(block [][]int16, size uint16, scale int) {
 }
 
 func dequantizeMid(block [][]int16, size uint16, scale int) {
-	dequantize(block, size, scale+5)
+	dequantize(block, size, scale+3)
 }
 
 func dequantizeHigh(block [][]int16, size uint16, scale int) {
-	dequantize(block, size, scale+7)
+	dequantize(block, size, scale+5)
 }
 
 func dequantize(data [][]int16, size uint16, scale int) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"time"
 
@@ -14,13 +15,17 @@ var (
 )
 
 func main() {
+	var bitrate int
+	flag.IntVar(&bitrate, "bitrate", 100, "target bitrate in kbps")
+	flag.Parse()
+
 	ycbcr, err := pngToYCbCr(srcPng)
 	if err != nil {
 		panic(fmt.Sprintf("%+v", err))
 	}
 
 	srcbit := ycbcr.Bounds().Dx() * ycbcr.Bounds().Dy() * 8
-	maxbit := 100 * 1000 // 100kbps
+	maxbit := bitrate * 1000
 	fmt.Printf("src %d bit\n", srcbit)
 	fmt.Printf("target %d bit = %3.2f%%\n", maxbit, (float64(maxbit)/float64(srcbit))*100)
 
