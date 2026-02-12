@@ -10,7 +10,7 @@ import (
 )
 
 func toInt16(u uint16) int16 {
-	return int16(u>>1) ^ -int16(u&1)
+	return int16(u>>1) ^ (-1 * int16(u&1))
 }
 
 func blockDecode(rr *RiceReader[uint16], size uint16) ([][]int16, error) {
@@ -380,47 +380,47 @@ func decodeBase(r io.Reader, size uint16) (*Image16, error) {
 	return sub, nil
 }
 
-func decode(r io.Reader) (*image.YCbCr, error) {
+func decode(r io.Reader) (*image.YCbCr, *image.YCbCr, *image.YCbCr, error) {
 	buf := bytes.NewBuffer(nil)
 
 	data0Size := uint32(0)
 	if err := binary.Read(r, binary.BigEndian, &data0Size); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	if _, err := io.CopyN(buf, r, int64(data0Size)); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	layer0, err := decodeBase(bytes.NewReader(buf.Bytes()), 8)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	buf.Reset()
 
 	data1Size := uint32(0)
 	if err := binary.Read(r, binary.BigEndian, &data1Size); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	if _, err := io.CopyN(buf, r, int64(data1Size)); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	layer1, err := decodeLayer(bytes.NewReader(buf.Bytes()), layer0, 16)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	buf.Reset()
 
 	data2Size := uint32(0)
 	if err := binary.Read(r, binary.BigEndian, &data2Size); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	if _, err := io.CopyN(buf, r, int64(data2Size)); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	layer2, err := decodeLayer(bytes.NewReader(buf.Bytes()), layer1, 32)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, nil, errors.WithStack(err)
 	}
 	buf.Reset()
 
-	return layer2.ToYCbCr(), nil
+	return layer0.ToYCbCr(), layer1.ToYCbCr(), layer2.ToYCbCr(), nil
 }

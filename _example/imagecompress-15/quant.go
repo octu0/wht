@@ -17,10 +17,10 @@ func quantize(data [][]int16, size uint16, scale int) {
 		for x := uint16(0); x < size; x += 1 {
 			v := int32(data[y][x])
 			off := int32(1 << (scale - 1))
-			if v >= 0 {
+			if 0 <= v {
 				data[y][x] = int16((v + off) >> scale)
 			} else {
-				data[y][x] = int16(-((-v + off) >> scale))
+				data[y][x] = int16(-1 * ((-1*v + off) >> scale))
 			}
 		}
 	}

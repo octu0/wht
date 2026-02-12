@@ -99,7 +99,7 @@ func transformLayer(w, h uint16, size uint16, predict predictFunc, updatePredict
 		return nil, nil, 0, errors.WithStack(err)
 	}
 
-	// Local Reconstruction: DWTはブロック単位なので、一度デコードしてから一括更新
+	// Local Reconstruction
 	planes, err := invertLayer(bytes.NewReader(data.Bytes()), ll, size)
 	if err != nil {
 		return nil, nil, 0, errors.WithStack(err)
@@ -119,7 +119,7 @@ func transformBase(w, h uint16, size uint16, predict predictFunc, updatePredict 
 		return nil, errors.WithStack(err)
 	}
 
-	// Local Reconstruction: DWTはブロック単位なので、一度デコードしてから一括更新
+	// Local Reconstruction
 	planes, err := invertFull(bytes.NewReader(data.Bytes()), size)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -318,7 +318,7 @@ func encode(img *image.YCbCr, maxbitrate int) ([]byte, error) {
 	// 全レイヤーの合計ピクセル数を計算して共有 RateController を作成
 	// layer2: dx*dy + (dx*dy/2), layer1: dx/2*dy/2 + (dx/2*dy/2)/2, layer0: dx/4*dy/4 + (dx/4*dy/4)/2
 	dx, dy := uint16(img.Bounds().Dx()), uint16(img.Bounds().Dy())
-	totalPixels := int(dx)*int(dy)*3/2 + int(dx/2)*int(dy/2)*3/2 + int(dx/4)*int(dy/4)*3/2
+	totalPixels := ((int(dx)*int(dy))*3)/2 + ((int(dx/2)*int(dy/2))*3)/2 + ((int(dx/4)*int(dy/4))*3)/2
 	scaler := &RateController{
 		maxbit:             maxbitrate,
 		totalProcessPixels: totalPixels,

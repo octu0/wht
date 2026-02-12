@@ -21,7 +21,7 @@ func lift53(data []int16) {
 		}
 		high[i] -= int16((l + r) >> 1)
 	}
-	for i := 0; i < half; i++ { // Update
+	for i := 0; i < half; i += 1 { // Update
 		d, dp := int32(high[i]), int32(high[i])
 		if 0 <= i-1 {
 			dp = int32(high[i-1])
@@ -41,23 +41,23 @@ func invLift53(data []int16) {
 	high := make([]int16, half)
 	copy(low, data[:half])
 	copy(high, data[half:])
-	for i := 0; i < half; i++ { // Inv Update
+	for i := 0; i < half; i += 1 { // Inv Update
 		d, dp := int32(high[i]), int32(high[i])
-		if i-1 >= 0 {
+		if 0 <= i-1 {
 			dp = int32(high[i-1])
 		}
 		low[i] -= int16((dp + d + 2) >> 2)
 	}
-	for i := 0; i < half; i++ { // Inv Predict
+	for i := 0; i < half; i += 1 { // Inv Predict
 		l, r := int32(low[i]), int32(low[i])
 		if i+1 < half {
 			r = int32(low[i+1])
 		}
 		high[i] += int16((l + r) >> 1)
 	}
-	for i := 0; i < half; i++ {
+	for i := 0; i < half; i += 1 {
 		data[2*i] = low[i]
-		data[2*i+1] = high[i]
+		data[(2*i)+1] = high[i]
 	}
 }
 

@@ -123,7 +123,7 @@ func (w *RiceWriter[T]) Flush() error {
 }
 
 func NewRiceWriter[T Unsigned](bw *BitWriter) *RiceWriter[T] {
-	return &RiceWriter[T]{bw: bw, maxVal: ^T(0)}
+	return &RiceWriter[T]{bw: bw, maxVal: 64}
 }
 
 type BitReader struct {
